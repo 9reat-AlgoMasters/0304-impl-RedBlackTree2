@@ -1,3 +1,5 @@
+import java.util.NoSuchElementException;
+
 public class Node implements iNode{
     static final int LEFT = -1;
     static final int RIGHT = 1;
@@ -70,6 +72,28 @@ public class Node implements iNode{
         return brother.color;
     }
 
+    public Node findBrother() {
+        int side = findSide();
+        Node brother = null;
+        switch(side) {
+            case ROOT:
+                throw new IllegalStateException("[Node][findBrother] 부모 노드가 없습니다.");
+
+            case LEFT:
+                brother = parent.right;
+                break;
+
+            case RIGHT:
+                brother = parent.left;
+        }
+
+        if (brother == null) {
+            throw new NoSuchElementException("[Node][findBrother] 형제 노드가 존재하지 않습니다.");
+        }
+
+        return brother;
+    }
+
     @Override
     public int hasRedChild() {
         int childInfo = findChildInfo();
@@ -113,5 +137,13 @@ public class Node implements iNode{
 
     public boolean isNilNode() {
         return this == NIL;
+    }
+
+    public void setBlack() {
+        color = BLACK;
+    }
+
+    public void setRed() {
+        color = RED;
     }
 }
