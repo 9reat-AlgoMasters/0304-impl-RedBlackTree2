@@ -1,3 +1,6 @@
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 public class RedBlackTree implements iRedBlackTree{
     Node root;
     int size;
@@ -107,6 +110,24 @@ public class RedBlackTree implements iRedBlackTree{
     
     @Override
     public int countBlack(Node tree) {
-        return 0;
+        Deque<Node> q = new ArrayDeque<>();
+        q.add(tree);
+        int blackCnt = 0;
+
+        while (!q.isEmpty()) {
+            Node now = q.poll();
+            if (now.color == BLACK) {
+                blackCnt++;
+            }
+
+            if (now.isNilNode()) {
+                continue;
+            }
+
+            q.add(now.left);
+            q.add(now.right);
+        }
+
+        return blackCnt;
     }
 }
