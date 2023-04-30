@@ -199,7 +199,143 @@ public class RedBlackTree implements iRedBlackTree{
     
     @Override
     public void delete(int value) {
-        
+        /*
+        value와 값이 같은 노드를 target으로 지정합니다.
+        만약 찾지 못한다면 IllegalArgumentException을 던집니다.
+         */
+        Node target = findByValue(root, value);
+        int childInfo = target.findChildInfo();
+
+        // TODO: 삭제되었을 때 null 대신 NIL Node 처리
+        switch (childInfo) {
+            // 1. 자식이 없을 때
+            case EMPTY:
+                // TODO: 삭제된 노드가 BLACK이라면 BLACK의 색이 NIL Node에게로 전달된다.
+
+                // target이 root라면 root를 null로 바꿔준다.
+                if (target == root) {
+                    root = null;
+                    size--;
+                    return;
+                }
+
+                // target의 부모가 존재한다면 target의 부모로부터 target까지 링크를 끊어준다.
+                if (target.parent.left == target) {
+                    target.parent.left = null;
+                } else {
+                    target.parent.right = null;
+                }
+                break;
+
+            // 2. 자식이 하나만 있을 때
+            case LEFT:
+            case RIGHT:
+                // TODO: 삭제된 노드가 BLACK이면 BLACK의 색이 자식에게 전달된다.
+
+                // next : target의 자식 노드
+                Node next = target.left == null ? target.right : target.left;
+
+                // target이 root일 경우 root 링크를 next 로 바꿔준다.
+                if (target == root) {
+                    root = next;
+                    size--;
+                    return;
+                }
+
+                // next의 부모를 target의 부모로 설정한다.
+                next.parent = target.parent;
+
+                // target의 부모의 자식을 target의 자식인 next로 설정한다.
+                if (target.parent.left == target) {
+                    target.parent.left = next;
+                } else {
+                    target.parent.right = next;
+                }
+                break;
+
+            // 3. 자식이 둘 다 있을 때
+            /*
+            관리 링크
+            1) target 부모 - replaceNode (target이 root라면 필요 없음)
+            2) replaceNode - target의 왼쪽 자식
+            3) replaceNode - target의 오른쪽 자식
+            4) replaceNode의 부모 - replaceNode의 왼쪽 자식 (없을 수도 있음)
+             */
+            case BOTH:
+                // TODO: replaceNode의 색은 target의 색을 따라야 한다. (값 복사로 수정)
+
+                // replaceNode : target의 자리를 대체할 노드
+                Node replaceNode = findReplaceNode(target.left);
+
+                // target이 root일 경우 root 링크를 replaceNode 로 바꿔준다.
+                if (target == root) {
+                    root = replaceNode;
+                }
+                // target이 root가 아니라면 target의 부모의 자식을 replaceNode로 바꿔준다.
+                else {
+                    if (target.parent.left == target) {
+                        target.parent.left = replaceNode;
+                    } else {
+                        target.parent.right = replaceNode;
+                    }
+                } // 여기서 바로 replaceNode 의 부모를 target의 부모로 설정해주지 않는 이유는 4)링크 관리 때문
+
+                // replaceNode의 왼쪽 자식이 존재하면 replaceNode의 부모와의 링크를 서로 이어준다.
+                if (replaceNode.left != null) {
+                    if (replaceNode == target.left) { // replaceNode가 부모 노드의 왼쪽 자식이라면 replace의 부모가 target
+                        replaceNode.parent.left = replaceNode.left;
+                    } else {
+                        replaceNode.parent.right = replaceNode.left;
+                    }
+                    replaceNode.left.parent = replaceNode.parent;
+                }
+                // replaceNode의 왼쪽 자식이 존재하지 않는다면 replaceNode의 부모로부터 replaceNode의 링크를 끊어준다.
+                else {
+                    if (replaceNode == target.left) {
+                        replaceNode.parent.left = null;
+                    } else {
+                        replaceNode.parent.right = null;
+                    }
+                }
+
+                // replaceNode의 target의 부모로 설정한다.
+                replaceNode.parent = target.parent;
+
+                // target의 오른쪽 자식과 replaceNode의 링크를 서로 이어준다.
+                target.right.parent = replaceNode;
+                replaceNode.right = target.right;
+
+                // target의 왼쪽 자식과 replaceNode의 링크를 서로 이어준다.
+                target.left.parent = replaceNode;
+                replaceNode.left = target.left;
+        }
+
+        size--;
+
+        // TODO: postProcessDelete
+    }
+
+    private Node findReplaceNode(Node node) {
+        while (node.right != null) {
+            node = node.right;
+        }
+        return node;
+    }
+
+    private Node findByValue(Node node, int value) {
+        if (node == null) {
+            throw new IllegalArgumentException(String.format("[findByValue] %d는 트리에 존재하지 않습니다.", value));
+        }
+
+        if (node.value == value) {
+            return node;
+        }
+
+        if (value < node.value) {
+            return findByValue(node.left, value);
+        } else {
+            return findByValue(node.right, value);
+        }
     }
     
     @Override
