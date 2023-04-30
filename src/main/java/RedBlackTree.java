@@ -174,12 +174,32 @@ public class RedBlackTree implements iRedBlackTree{
 
     @Override
     public boolean contains(int value) {
-        return false;
+        return containsRecur(root, value);
+    }
+
+    private boolean containsRecur(Node node, int value) {
+        if (node == null) {
+            throw new NullPointerException("[contains] 탐색하고자 하는 Node가 null입니다.");
+        }
+
+        if (node == Node.NIL) {
+            return false;
+        }
+
+        if (node.value == value) {
+            return true;
+        }
+
+        if (value < node.value) {
+            return containsRecur(node.left, value);
+        } else {
+            return containsRecur(node.right, value);
+        }
     }
     
     @Override
     public void delete(int value) {
-    
+        
     }
     
     @Override
