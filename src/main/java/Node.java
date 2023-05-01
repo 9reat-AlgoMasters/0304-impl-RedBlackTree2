@@ -36,6 +36,13 @@ public class Node implements iNode{
         this.color = BLACK;
         hasExtraBlack = false;
     }
+    
+    public static Node getDoublyBlackNilNode(Node parent) {
+        Node doublyBlackNilNode = new Node();
+        doublyBlackNilNode.setExtraBlack();
+        doublyBlackNilNode.parent = parent;
+        return doublyBlackNilNode;
+    }
 
     @Override
     public int findSide() {
@@ -145,5 +152,23 @@ public class Node implements iNode{
 
     public void setRed() {
         color = RED;
+    }
+    
+    public boolean isBlack() {
+        return color == BLACK;
+    }
+    
+    public void setExtraBlack() {
+        if (color == RED) {
+            throw new IllegalStateException("RED 노드는 extra black을 가질 수 없습니다.");
+        } else if (hasExtraBlack) {
+            throw new IllegalArgumentException("이미 extra black을 가진 노드는 추가로 black을 가질 수 없습니다.");
+        }
+        
+        hasExtraBlack = true;
+    }
+    
+    public void setValue(int value) {
+        this.value = value;
     }
 }
