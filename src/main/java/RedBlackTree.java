@@ -133,7 +133,7 @@ public class RedBlackTree implements iRedBlackTree{
 
                 }
                 // 2) 오른쪽 -> 왼쪽 으로 꺾여 있는 경우
-                else if (node.parent.findSide() == LEFT && node.findSide() == RIGHT) {
+                else if (node.parent.findSide() == RIGHT && node.findSide() == LEFT) {
                     /*
                     a) node의 부모 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
                     b) node의 할아버지 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
@@ -205,52 +205,20 @@ public class RedBlackTree implements iRedBlackTree{
          */
         Node target = findByValue(root, value);
         int childInfo = target.findChildInfo();
+        Node postProcessNode = null;
 
         // TODO: 삭제되었을 때 null 대신 NIL Node 처리
         switch (childInfo) {
             // 1. 자식이 없을 때
             case EMPTY:
-                // TODO: 삭제된 노드가 BLACK이라면 BLACK의 색이 NIL Node에게로 전달된다.
-
-                // target이 root라면 root를 null로 바꿔준다.
-                if (target == root) {
-                    root = null;
-                    size--;
-                    return;
-                }
-
-                // target의 부모가 존재한다면 target의 부모로부터 target까지 링크를 끊어준다.
-                if (target.parent.left == target) {
-                    target.parent.left = null;
-                } else {
-                    target.parent.right = null;
-                }
+                postProcessNode = deleteNodeWithNoChild(target);
                 break;
 
             // 2. 자식이 하나만 있을 때
             case LEFT:
             case RIGHT:
-                // TODO: 삭제된 노드가 BLACK이면 BLACK의 색이 자식에게 전달된다.
-
                 // next : target의 자식 노드
-                Node next = target.left == null ? target.right : target.left;
-
-                // target이 root일 경우 root 링크를 next 로 바꿔준다.
-                if (target == root) {
-                    root = next;
-                    size--;
-                    return;
-                }
-
-                // next의 부모를 target의 부모로 설정한다.
-                next.parent = target.parent;
-
-                // target의 부모의 자식을 target의 자식인 next로 설정한다.
-                if (target.parent.left == target) {
-                    target.parent.left = next;
-                } else {
-                    target.parent.right = next;
-                }
+                postProcessNode = deleteNodeWithOneChild(target);
                 break;
 
             // 3. 자식이 둘 다 있을 때
@@ -262,59 +230,187 @@ public class RedBlackTree implements iRedBlackTree{
             4) replaceNode의 부모 - replaceNode의 왼쪽 자식 (없을 수도 있음)
              */
             case BOTH:
-                // TODO: replaceNode의 색은 target의 색을 따라야 한다. (값 복사로 수정)
-
                 // replaceNode : target의 자리를 대체할 노드
                 Node replaceNode = findReplaceNode(target.left);
-
-                // target이 root일 경우 root 링크를 replaceNode 로 바꿔준다.
-                if (target == root) {
-                    root = replaceNode;
+                
+                // target의 값을 replaceNode의 값으로 수정한다.
+                target.setValue(replaceNode.value);
+                
+                /*
+                이 경우 replaceNode가 삭제되는 노드로 처리할 수 있고
+                replaceNode는 오른쪽 자식이 없기 때문에 자식이 한개 이거나 없다.
+                 */
+                int replaceNodeChildInfo = replaceNode.findChildInfo();
+                if (replaceNodeChildInfo == EMPTY) {
+                    postProcessNode = deleteNodeWithNoChild(replaceNode);
+                } else if (replaceNodeChildInfo == LEFT) {
+                    postProcessNode = deleteNodeWithOneChild(replaceNode);
+                } else {
+                    throw new IllegalStateException("[delete] replace node에 오른쪽 자식이 존재합니다.");
                 }
-                // target이 root가 아니라면 target의 부모의 자식을 replaceNode로 바꿔준다.
-                else {
-                    if (target.parent.left == target) {
-                        target.parent.left = replaceNode;
-                    } else {
-                        target.parent.right = replaceNode;
-                    }
-                } // 여기서 바로 replaceNode 의 부모를 target의 부모로 설정해주지 않는 이유는 4)링크 관리 때문
-
-                // replaceNode의 왼쪽 자식이 존재하면 replaceNode의 부모와의 링크를 서로 이어준다.
-                if (replaceNode.left != null) {
-                    if (replaceNode == target.left) { // replaceNode가 부모 노드의 왼쪽 자식이라면 replace의 부모가 target
-                        replaceNode.parent.left = replaceNode.left;
-                    } else {
-                        replaceNode.parent.right = replaceNode.left;
-                    }
-                    replaceNode.left.parent = replaceNode.parent;
-                }
-                // replaceNode의 왼쪽 자식이 존재하지 않는다면 replaceNode의 부모로부터 replaceNode의 링크를 끊어준다.
-                else {
-                    if (replaceNode == target.left) {
-                        replaceNode.parent.left = null;
-                    } else {
-                        replaceNode.parent.right = null;
-                    }
-                }
-
-                // replaceNode의 target의 부모로 설정한다.
-                replaceNode.parent = target.parent;
-
-                // target의 오른쪽 자식과 replaceNode의 링크를 서로 이어준다.
-                target.right.parent = replaceNode;
-                replaceNode.right = target.right;
-
-                // target의 왼쪽 자식과 replaceNode의 링크를 서로 이어준다.
-                target.left.parent = replaceNode;
-                replaceNode.left = target.left;
         }
 
         size--;
-
         // TODO: postProcessDelete
+        if (postProcessNode != null) {
+            postProcessOfDelete(postProcessNode);
+        }
     }
+    
+    /**
+     * 자식이 없는 노드를 삭제합니다.
+     * @param target 삭제될 노드
+     * @return 삭제하는 과정에서 Doubly Dlack NIL Node가 생긴다면 해당 노드를 반환합니다. 생기지 않는다면 null을 반환합니다.
+     */
+    private Node deleteNodeWithNoChild(Node target) {
+        // target이 root라면 root를 null로 바꿔준다.
+        if (target == root) {
+            root = null;
+            size--;
+            return null;
+        }
 
+                /*
+                target의 부모가 존재한다면
+                1. target이 BLACK 이라면 target의 부모에게 doublyBlackNil노드를 연결한다.
+                    - 그 후 postProcessNode를 해당 doublyBlackNil로 지정한다.
+                2. target이 RED 라면 target의 부모에게 NIL 을 연결한다.
+                 */
+        if (target.parent.left == target) {
+            if (target.isBlack()) {
+                target.parent.left = Node.getDoublyBlackNilNode(target.parent);
+                return target.parent.left;
+            } else {
+                target.parent.left = Node.NIL;
+            }
+            
+        } else {
+            if (target.isBlack()) {
+                target.parent.right = Node.getDoublyBlackNilNode(target.parent);
+                return target.parent.right;
+            } else {
+                target.parent.right = Node.NIL;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 자식이 한개만 있는 노드를 삭제합니다.
+     * @param target 삭제될 노드
+     * @return 삭제하는 과정에서 Doubly Dlack NIL Node가 생긴다면 해당 노드를 반환합니다. 생기지 않는다면 null을 반환합니다.
+     */
+    private Node deleteNodeWithOneChild(Node target) {
+        Node next = target.left == Node.NIL ? target.right : target.left;
+
+                /*
+                target이 root일 경우 root 링크를 target의 자식으로 바꾼다.
+                ** target이 BLACK이라면 루트가 될 자식 노드의 색을 BLACK으로 바꾼다.
+                    - 이미 BLACK 이라면 바꾸지 않아도 된다.
+                 */
+        if (target == root) {
+            root = next;
+            if (target.isBlack()) {
+                root.setBlack();
+            }
+            size--;
+            return null;
+        }
+        
+        // next와 target의 부모를 이어준다.
+        next.parent = target.parent;
+        if (target.parent.left == target) {
+            target.parent.left = next;
+        } else {
+            target.parent.right = next;
+        }
+                
+                /*
+                target이 BLACK이라면 RedBlack Tree의 속성을 유지하기 위해 BLACK을 next에게 보낸다.
+                    - next도 BLACK 이라면 extra black을 설정하고 postProcessNode로 지정한다.
+                    - next가 RED 라면 BLACK으로 바꿔준다.
+                 */
+        if (target.isBlack()) {
+            if (next.isBlack()) {
+                next.setExtraBlack();
+                return next;
+            } else {
+                next.setBlack();
+            }
+        }
+        return null;
+    }
+    
+    private void postProcessOfDelete(Node postProcessNode) {
+        /*
+        < CASE STUDY >
+        1. 형제가 BLACK 이고 RED 자식을 가지고 있을 때
+        2. 형제가 BLACK 이고 RED 자식이 없을 때
+        3. 형제가 RED일 때
+         */
+        
+        // CASE 1,2 - 형제가 BLACK 이라면
+        if (postProcessNode.isBrotherBlack()) {
+            // CASE 1 - 형제가 BLACK 이고 RED 자식을 가지고 있을 때
+            Node brotherNode = postProcessNode.findBrother();
+            if (brotherNode.hasRedChild() != EMPTY) {
+                /*
+                1-1) 형제가 가진 RED 자식이 postProcessNode의 부모로부터 직선으로 이어져 있을 때
+                1-2) 형제가 가진 RED 자식이 postProcessNode의 부모로부터 한번 꺾여서 이어져 있을 때
+                 */
+                // 2-1-1. node 부터 할아버지 노드까지 일직선으로 연결되어 있을 경우
+                if (brotherNode.findSide() == brotherNode.hasRedChild()) {
+                    // 1) 왼쪽으로만 이어진 경우
+                    if (brotherNode.findSide() == LEFT) {
+                    /*
+                    a) node의 할아버지 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
+                    b) 기존의 할아버지 노드(BLACK)와 부모(RED)의 색을 서로 바꿔줍니다.
+                     */
+                        
+                    } else { // 2) 오른쪽으로만 이어진 경우
+                    /*
+                    a) node의 할아버지 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
+                    b) 기존의 할아버지 노드(BLACK)와 부모(RED)의 색을 서로 바꿔줍니다.
+                     */
+                     
+                    }
+                }
+                
+                // 2-1-2. node 부터 할아버지 노드까지 부모 노드에서 한번 꺾인 경우
+                else {
+                    // 1) 왼쪽 -> 오른쪽 으로 꺾여 있는 경우
+                    if (brotherNode.parent.findSide() == LEFT && brotherNode.hasRedChild() == RIGHT) {
+                    /*
+                    a) node의 부모 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
+                    b) node의 할아버지 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
+                    c) 기존의 할아버지 노드(BLACK)와 node(RED)의 색을 서로 바꿔줍니다.
+                     */
+                     
+                    }
+                    // 2) 오른쪽 -> 왼쪽 으로 꺾여 있는 경우
+                    else if (brotherNode.parent.findSide() == RIGHT && brotherNode.hasRedChild() == LEFT) {
+                    /*
+                    a) node의 부모 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
+                    b) node의 할아버지 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
+                    c) 기존의 할아버지 노드(BLACK)와 node(RED)의 색을 서로 바꿔줍니다.
+                     */
+                     
+                    }
+                } // [2-1-2] 꺾인 경우 종료
+            }
+            
+            // CASE 2 - 형제가 BLACK 이고 RED 자식이 없을 때
+            else {
+            
+            }
+        }
+        
+        // CASE 3 - 형제가 RED 라면
+        else {
+        
+        }
+    }
+    
     private Node findReplaceNode(Node node) {
         while (node.right != null) {
             node = node.right;
