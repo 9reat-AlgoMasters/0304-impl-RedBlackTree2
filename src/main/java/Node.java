@@ -12,19 +12,48 @@ public class Node implements iNode{
         color = RED;
         hasExtraBlack = false;
     }
+
     
     @Override
     public int findBrotherColor() {
-        return 0;
+        Node brother = null;
+        int side = findSide();
+        if(side == -1){
+            brother = parent.right;
+        }else if(side == 1){
+            brother = parent.left;
+        }
+
+        if(brother == null){
+            return 0;
+        }
+        return brother.color;
     }
     
     @Override
     public int findSide() {
-        return 0;
+        if(parent == null){
+            return 0;
+        }
+
+        if(parent.left == this){
+            return -1;
+        }
+
+        return 1;
     }
     
     @Override
     public int hasRedChild() {
+        if(left != null && left.color == RED){
+            if(right != null && right.color == RED){
+                return 2;
+            }
+            return -1;
+        }else if(right != null && right.color == RED){
+            return 1;
+        }
+
         return 0;
     }
 }
