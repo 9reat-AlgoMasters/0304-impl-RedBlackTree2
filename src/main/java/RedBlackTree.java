@@ -207,7 +207,6 @@ public class RedBlackTree implements iRedBlackTree{
         int childInfo = target.findChildInfo();
         Node postProcessNode = null;
 
-        // TODO: 삭제되었을 때 null 대신 NIL Node 처리
         switch (childInfo) {
             // 1. 자식이 없을 때
             case EMPTY:
@@ -251,7 +250,6 @@ public class RedBlackTree implements iRedBlackTree{
         }
 
         size--;
-        // TODO: postProcessDelete
         if (postProcessNode != null) {
             postProcessOfDelete(postProcessNode);
         }
@@ -344,10 +342,17 @@ public class RedBlackTree implements iRedBlackTree{
     private void postProcessOfDelete(Node postProcessNode) {
         /*
         < CASE STUDY >
+        0. postProcessNode가 root일 때
         1. 형제가 BLACK 이고 RED 자식을 가지고 있을 때
         2. 형제가 BLACK 이고 RED 자식이 없을 때
         3. 형제가 RED일 때
          */
+
+        // case0 - postProcessNode가 root라면 BLACK으로 바꿔준다.
+        if (postProcessNode == root) {
+            postProcessNode.setBlack();
+            return;
+        }
         
         // CASE 1,2 - 형제가 BLACK 이라면
         if (postProcessNode.isBrotherBlack()) {
@@ -358,59 +363,127 @@ public class RedBlackTree implements iRedBlackTree{
                 1-1) 형제가 가진 RED 자식이 postProcessNode의 부모로부터 직선으로 이어져 있을 때
                 1-2) 형제가 가진 RED 자식이 postProcessNode의 부모로부터 한번 꺾여서 이어져 있을 때
                  */
-                // 2-1-1. node 부터 할아버지 노드까지 일직선으로 연결되어 있을 경우
-                if (brotherNode.findSide() == brotherNode.hasRedChild()) {
+                // 1-1. node 부터 할아버지 노드까지 일직선으로 연결되어 있을 경우
+                if (brotherNode.hasRedChild() == BOTH || brotherNode.findSide() == brotherNode.hasRedChild()) {
                     // 1) 왼쪽으로만 이어진 경우
                     if (brotherNode.findSide() == LEFT) {
-                    /*
-                    a) node의 할아버지 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
-                    b) 기존의 할아버지 노드(BLACK)와 부모(RED)의 색을 서로 바꿔줍니다.
-                     */
-                        
+                        treatDoublyBlackOfCaseOne(postProcessNode, brotherNode, LEFT);
+
                     } else { // 2) 오른쪽으로만 이어진 경우
-                    /*
-                    a) node의 할아버지 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
-                    b) 기존의 할아버지 노드(BLACK)와 부모(RED)의 색을 서로 바꿔줍니다.
-                     */
-                     
+                        treatDoublyBlackOfCaseOne(postProcessNode, brotherNode, RIGHT);
                     }
                 }
                 
-                // 2-1-2. node 부터 할아버지 노드까지 부모 노드에서 한번 꺾인 경우
+                // 1-2. node 부터 할아버지 노드까지 부모 노드에서 한번 꺾인 경우
                 else {
                     // 1) 왼쪽 -> 오른쪽 으로 꺾여 있는 경우
                     if (brotherNode.parent.findSide() == LEFT && brotherNode.hasRedChild() == RIGHT) {
-                    /*
-                    a) node의 부모 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
-                    b) node의 할아버지 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
-                    c) 기존의 할아버지 노드(BLACK)와 node(RED)의 색을 서로 바꿔줍니다.
-                     */
-                     
+                        /*
+                        a) brotherNode를 기준으로 왼쪽 회전한다.
+                        b) brotherNode를 brotherNode의 자식으로 바꾼다.
+                        c) brotherNode(RED)(기존 자식)은 BLACK로, brotherNode의 자식(오른쪽)(기존 brotherNode)은 RED으로 바꾼다.
+                        d) 1-1 case로 처리한다.
+                         */
+                        rotateLeft(brotherNode); // a)
+                        brotherNode = brotherNode.parent; // b)
+                        brotherNode.setBlack(); // c)
+                        brotherNode.right.setRed(); // c)
+                        treatDoublyBlackOfCaseOne(postProcessNode, brotherNode, LEFT);
                     }
                     // 2) 오른쪽 -> 왼쪽 으로 꺾여 있는 경우
                     else if (brotherNode.parent.findSide() == RIGHT && brotherNode.hasRedChild() == LEFT) {
-                    /*
-                    a) node의 부모 노드를 루트로 하는 서브트리를 왼쪽으로 회전합니다.
-                    b) node의 할아버지 노드를 루트로 하는 서브트리를 오른쪽으로 회전합니다.
-                    c) 기존의 할아버지 노드(BLACK)와 node(RED)의 색을 서로 바꿔줍니다.
-                     */
-                     
+                        /*
+                        a) brotherNode를 기준으로 오른쪽 회전한다.
+                        b) brotherNode를 brotherNode의 자식으로 바꾼다.
+                        c) brotherNode(RED)(기존 자식)은 BLACK로, brotherNode의 자식(왼쪽)(기존 brotherNode)은 RED으로 바꾼다.
+                        d) 1-1 case로 처리한다.
+                         */
+                        rotateRight(brotherNode); // a)
+                        brotherNode = brotherNode.parent; // b)
+                        brotherNode.setBlack(); // c)
+                        brotherNode.left.setRed(); // c)
+                        treatDoublyBlackOfCaseOne(postProcessNode, brotherNode, RIGHT);
                     }
                 } // [2-1-2] 꺾인 경우 종료
             }
             
             // CASE 2 - 형제가 BLACK 이고 RED 자식이 없을 때
             else {
-            
+                /*
+                a) postProcessNode의 부모가 자식들의 BLACK을 가져간다.
+                b) postProcessNode의 부모에서 postProcessOfDelete를 호출한다.
+                 */
+                postProcessNode.parent.takeBlackFromChild();
+                postProcessOfDelete(postProcessNode.parent);
             }
         }
         
-        // CASE 3 - 형제가 RED 라면
+        // CASE 3 - 형제가 RED 라면 (postProcessNode가 BLACK임이 보장된다.)
         else {
-        
+            if (postProcessNode.parent.isRed()) {
+                throw new IllegalStateException("[delete][postProcess] postProcessNode의 형제가 RED인데 부모도 RED입니다.");
+            }
+
+            Node brotherNode = postProcessNode.findBrother();
+            // 3-1. doubly black이 부모의 왼쪽 자식인 경우
+            if (postProcessNode.findSide() == LEFT) {
+                /*
+                a) postProcessNode의 부모노드를 기준으로 왼쪽 회전한다.
+                b) 색 교환
+                    - 기존 postProcessNode의 부모노드는 BLACK -> RED
+                    - 기존 형제노드는 RED -> BLACK
+                c) postProcessOfDelete를 호출해서 CASE 1 또는 CASE 2로 처리되게 한다.
+                 */
+
+                rotateLeft(postProcessNode.parent); // a)
+                postProcessNode.parent.setRed(); // b)
+                brotherNode.setBlack(); // b)
+                postProcessOfDelete(postProcessNode);
+            }
+
+            // 3-2. doubly black이 부모의 오른쪽 자식인 경우
+            if (postProcessNode.findSide() == RIGHT) {
+                /*
+                a) postProcessNode의 부모노드를 기준으로 오른쪽 회전한다.
+                b) 색 교환
+                    - 기존 postProcessNode의 부모노드는 BLACK -> RED
+                    - 기존 형제노드는 RED -> BLACK
+                c) postProcessOfDelete를 호출해서 CASE 1 또는 CASE 2로 처리되게 한다.
+                 */
+
+                rotateRight(postProcessNode.parent); // a)
+                postProcessNode.parent.setRed(); // b)
+                brotherNode.setBlack(); // b)
+                postProcessOfDelete(postProcessNode);
+            }
         }
     }
-    
+
+    private void treatDoublyBlackOfCaseOne(Node postProcessNode, Node brotherNode, int side) {
+        /*
+        a) brotherNode의 BLACK을 자식으로 내려준다.
+        b) postProcessNode의 부모 노드를 기준으로 회전한다. --> brother 노드가 서브트리 루트로 바뀐다.
+            - 왼쪽으로 이어진 경우 (side == LEFT) ---> 오른쪽 회전
+            - 오른쪽으로 이어진 경우 (side == RIGHT) ---> 왼쪽 회전
+        c) brotherNode(RED)와 postProcessNode 부모(BLACK)의 색을 바꿔준다.
+        d) postProcessNode의 부모노드 (항상 RED) 가 자식노드들의 BLACK을 가져간다.
+            - 자식노드들은 BLACK 또는 Doubly Black 이므로 각각 RED로 바꾸거나 BLACK 으로 바꾼다.
+            - postProcessNode의 부모노드는 BLACK이 된다.
+         */
+        
+        brotherNode.giveBlackToChild(); // a)
+        if (side == LEFT) { // b)
+            rotateRight(brotherNode.parent);
+        } else {
+            rotateLeft(brotherNode.parent);
+        }
+        brotherNode.setBlack(); // c)
+        postProcessNode.parent.setRed(); // c)
+        if (postProcessNode.parent.takeBlackFromChild()) {
+            throw new IllegalStateException("[delete][postProcess] 자식에게서 BLACK을 가져간 뒤 Doubly Black이 되었습니다.");
+        }
+    }
+
     private Node findReplaceNode(Node node) {
         while (node.right != null) {
             node = node.right;
