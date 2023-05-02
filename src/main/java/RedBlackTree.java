@@ -5,8 +5,9 @@ public class RedBlackTree implements iRedBlackTree{
     static final int BLACK = -1;
     static final int RED = 1;
     static final int LEFT = -1;
-    static final int RIGHT = -1;
-    static final  int NoParent = 0;
+    static final int RIGHT = 1;
+    static final  int NOTEXIT = 0;
+    static final int BOTH = 2;
 
     public static Node NIL = new Node(null, null, null, 0, BLACK);
     Node root;
@@ -235,7 +236,7 @@ public class RedBlackTree implements iRedBlackTree{
 
             if(target == root) {
                 root = child;
-                root.color = BLACK;
+                root.color = BLACK; // root 노드는 항상 black
                 return;
             }
 
@@ -258,12 +259,67 @@ public class RedBlackTree implements iRedBlackTree{
             }
         }
 
-
-
-
     }
 
     private void removeExtraBlack(Node extraBlackNode) {
+        if(extraBlackNode.color == RED) {
+            extraBlackNode.color = BLACK;
+            return;
+        }
+/**
+ * 현재 노드의 자식 중 Red Node가 있는지 확인합니다.
+ *
+ * @return 왼쪽자식 : -1, 오른쪽 자식 : 1, 양쪽 : 2, 없음 : 0
+ */
+
+        //case 4 : 형제의 색이 빨강인 경우
+        // 형제를 검정으로 만들어 아래의 케이스 중에서 한번 더 걸리게 된다.
+        if(extraBlackNode.parent.hasRedChild() == RIGHT || extraBlackNode.hasRedChild() == LEFT){
+            if(extraBlackNode.findSide() == LEFT){
+                extraBlackNode.parent.right.color = BLACK;
+                extraBlackNode.parent.color = RED;
+                rotateLeft(extraBlackNode.parent);
+            }else{
+                extraBlackNode.parent.left.color = BLACK;
+                extraBlackNode.parent.color = RED;
+                rotateRight(extraBlackNode.parent);
+            }
+
+        }
+
+
+        //case 1, 2, 3: 더블블랙의 형제가 블랙인경우
+        if(extraBlackNode.parent.hasRedChild() == NOTEXIT){
+
+            //case 1 형제가 왼쪽에 존재하고 형제의 왼쪽에 자식이 RED 일때
+            if(extraBlackNode.findSide() == LEFT && extraBlackNode.parent.right.right.color == RED){
+                Node brother = extraBlackNode.parent.right;
+
+                brother.color = extraBlackNode.parent.color; //형제의 색은 부모의 색과 동일하게 만들고
+                //형제의 부모와 빨간 자식을 black 으로 바꿈
+                extraBlackNode.parent.color = BLACK;
+                brother.right.color = BLACK;
+
+                rotateLeft(extraBlackNode.parent); //부모를 기준으로 왼쪽으로 회전
+                extraBlackNode.hasExtraBlack = false;
+
+            }else if(extraBlackNode.findSide() == RIGHT && extraBlackNode.parent.left.left.color == RED){
+                Node brother = extraBlackNode.parent.left; //형제노드
+
+                brother.color = extraBlackNode.parent.color; //형제의 색은 부모의 색과 동일하게 만들고
+                //형제의 부모와 빨간 자식을 black 으로 바꿈
+                extraBlackNode.parent.color = BLACK;
+                brother.left.color = BLACK;
+
+                rotateRight(extraBlackNode.parent); //부모를 기준으로 오른쪽으로 회전
+                extraBlackNode.hasExtraBlack = false;
+            }
+
+
+
+
+        }
+
 
     }
 
