@@ -109,9 +109,22 @@ public class RedBlackTree implements iRedBlackTree{
         // 루트를 항상 검정색으로
         root.color = Node.BLACK;
     }
-    
+
+    //주어진 값이 트리에 존재하는지 검사하는 메서드
     @Override
     public boolean contains(int value) {
+        Node current = root;
+
+        while (current != null) {
+            if (value < current.value) {
+                current = current.left;
+            } else if (value > current.value) {
+                current = current.right;
+            } else {
+                return true;
+            }
+        }
+
         return false;
     }
     
@@ -159,9 +172,28 @@ public class RedBlackTree implements iRedBlackTree{
         leftChild.right = tree;  // 왼쪽 자식의 오른쪽 자식을 노드로 설정
         tree.parent = leftChild;  // 노드의 부모를 왼쪽 자식으로 설정
     }
-    
+
+    // 주어진 Node를 루트로하는 서브트리에서 검은색 노드의 개수 반환 하는 메서드
     @Override
     public int countBlack(Node tree) {
-        return 0;
+        if (tree == null) {
+            return 1; // 리프 노드(NIL 노드)는 검은색 노드로 간주
+        }
+
+        int leftBlackCount = countBlack(tree.left);
+        int rightBlackCount = countBlack(tree.right);
+
+        // 어느 하나의 서브트리라도 -1인 경우나 검은 노드의 개수가 다른 경우 -1을 반환
+        if (leftBlackCount == -1 || rightBlackCount == -1 || leftBlackCount != rightBlackCount) {
+            return -1;
+        }
+
+        int blackCount = leftBlackCount;
+        if (tree.color == BLACK) {
+            blackCount++; // 현재 노드가 검은색인 경우 1을 증가시킴
+        }
+
+        return blackCount;
     }
+
 }
